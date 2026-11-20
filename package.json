@@ -2,6 +2,12 @@
   "name": "protege",
   "version": "0.0.0",
   "description": "An agent harness that learns a business user's recurring work",
+  "license": "MIT",
+  "author": "Harsha Sai",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/harshasai-eng/protege.git"
+  },
   "private": true,
   "type": "module",
   "engines": {
