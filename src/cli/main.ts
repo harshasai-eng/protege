@@ -6,7 +6,7 @@ function main(args: string[]): number {
     console.log(HARNESS_VERSION);
     return 0;
   }
-  console.log(`Protégé ${HARNESS_VERSION}: nothing here yet.`);
+  console.log(`Protege ${HARNESS_VERSION}: nothing here yet.`);
   return 0;
 }
 
