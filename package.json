@@ -1,0 +1,25 @@
+{
+  "name": "protege",
+  "version": "0.0.0",
+  "description": "An agent harness that learns a business user's recurring work",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=26"
+  },
+  "bin": {
+    "protege": "./dist/cli/main.js"
+  },
+  "scripts": {
+    "dev": "node src/cli/main.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.1"
+  }
+}
