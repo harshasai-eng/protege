@@ -80,13 +80,12 @@ export const configSchema = z
       .strictObject({ defaultMode: z.enum(["plan", "ask", "auto"]).default("ask") })
       .prefault({}),
     worker: z.strictObject({ timeoutMinutes: count.default(60) }).prefault({}),
-    ownership: z
-      .strictObject({ heartbeatSeconds: count.default(10), staleSeconds: count.default(30) })
-      .prefault({}),
     storage: z
       .strictObject({
-        busyTimeoutMs: count.default(5_000),
-        migrationLockTimeoutMs: count.default(60_000),
+        busyTimeoutMs: count.default(100),
+        runWriteBudgetMs: count.default(60_000),
+        writeBudgetMs: count.default(20_000),
+        cleanupBudgetMs: count.default(1_000),
         artifactRetentionDays: count.default(30),
       })
       .prefault({}),
@@ -107,8 +106,6 @@ export const configSchema = z
       problem(["compaction", "reactiveTarget"], "must be below compaction.threshold");
     if (c.shell.defaultTimeoutMs > c.shell.maxTimeoutMs)
       problem(["shell", "defaultTimeoutMs"], "must not exceed shell.maxTimeoutMs");
-    if (c.ownership.staleSeconds <= c.ownership.heartbeatSeconds)
-      problem(["ownership", "staleSeconds"], "must be longer than ownership.heartbeatSeconds");
     if (c.retry.backoffMinMs > c.retry.backoffMaxMs)
       problem(["retry", "backoffMinMs"], "must not exceed retry.backoffMaxMs");
   });
