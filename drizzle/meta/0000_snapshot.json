@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "cfd40a25-c9cb-424c-887d-3d4c91bebc38",
+  "id": "755dbd50-ab76-4928-908e-ab194545dddc",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "items": {
@@ -265,7 +265,7 @@
       "checkConstraints": {
         "runs_end_reason": {
           "name": "runs_end_reason",
-          "value": "end_reason in ('completed', 'max_turns', 'cancelled', 'time_limit', 'process_died', 'output_truncated', 'content_filtered', 'transient_exhausted', 'non_retryable', 'context_overflow')"
+          "value": "end_reason in ('completed', 'max_turns', 'cancelled', 'time_limit', 'interrupted', 'output_truncated', 'content_filtered', 'transient_exhausted', 'non_retryable', 'context_overflow')"
         },
         "runs_ended": {
           "name": "runs_ended",
@@ -445,20 +445,6 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
-        },
-        "owner_id": {
-          "name": "owner_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "owner_heartbeat_at": {
-          "name": "owner_heartbeat_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
         }
       },
       "indexes": {
@@ -487,14 +473,6 @@
           ],
           "isUnique": false,
           "where": "\"sessions\".\"parent_session_id\" is not null"
-        },
-        "sessions_owner": {
-          "name": "sessions_owner",
-          "columns": [
-            "owner_id"
-          ],
-          "isUnique": false,
-          "where": "\"sessions\".\"owner_id\" is not null"
         },
         "sessions_open": {
           "name": "sessions_open",
@@ -542,7 +520,7 @@
         },
         "sessions_close_reason": {
           "name": "sessions_close_reason",
-          "value": "\"sessions\".\"close_reason\" in ('marked', 'worker_finished', 'subagent_finished', 'process_died', 'context_overflow')"
+          "value": "\"sessions\".\"close_reason\" in ('marked', 'worker_finished', 'subagent_finished', 'interrupted', 'context_overflow')"
         },
         "sessions_outcome": {
           "name": "sessions_outcome",
@@ -567,10 +545,6 @@
         "sessions_marked": {
           "name": "sessions_marked",
           "value": "\"sessions\".\"outcome\" is null or (\"sessions\".\"kind\" = 'interactive' and \"sessions\".\"close_reason\" = 'marked')"
-        },
-        "sessions_owner": {
-          "name": "sessions_owner",
-          "value": "(\"sessions\".\"owner_id\" is null) = (\"sessions\".\"owner_heartbeat_at\" is null)"
         }
       }
     },
@@ -663,6 +637,13 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
+          "autoincrement": false
+        },
+        "activated_at": {
+          "name": "activated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
           "autoincrement": false
         }
       },

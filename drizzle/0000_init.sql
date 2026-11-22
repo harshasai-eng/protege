@@ -32,7 +32,7 @@ CREATE TABLE `runs` (
 	`turn_count` integer DEFAULT 0 NOT NULL,
 	PRIMARY KEY(`session_id`, `run_index`),
 	FOREIGN KEY (`session_id`) REFERENCES `sessions`(`id`) ON UPDATE no action ON DELETE no action,
-	CONSTRAINT "runs_end_reason" CHECK(end_reason in ('completed', 'max_turns', 'cancelled', 'time_limit', 'process_died', 'output_truncated', 'content_filtered', 'transient_exhausted', 'non_retryable', 'context_overflow')),
+	CONSTRAINT "runs_end_reason" CHECK(end_reason in ('completed', 'max_turns', 'cancelled', 'time_limit', 'interrupted', 'output_truncated', 'content_filtered', 'transient_exhausted', 'non_retryable', 'context_overflow')),
 	CONSTRAINT "runs_ended" CHECK(("runs"."ended_at" is null) = ("runs"."end_reason" is null))
 );
 --> statement-breakpoint
@@ -61,25 +61,21 @@ CREATE TABLE `sessions` (
 	`outcome` text,
 	`outcome_note` text,
 	`outcome_at` integer,
-	`owner_id` text,
-	`owner_heartbeat_at` integer,
 	FOREIGN KEY (`workflow_id`) REFERENCES `workflows`(`id`) ON UPDATE no action ON DELETE no action,
 	FOREIGN KEY (`parent_session_id`) REFERENCES `sessions`(`id`) ON UPDATE no action ON DELETE no action,
 	CONSTRAINT "sessions_kind" CHECK("sessions"."kind" in ('interactive', 'worker', 'subagent')),
-	CONSTRAINT "sessions_close_reason" CHECK("sessions"."close_reason" in ('marked', 'worker_finished', 'subagent_finished', 'process_died', 'context_overflow')),
+	CONSTRAINT "sessions_close_reason" CHECK("sessions"."close_reason" in ('marked', 'worker_finished', 'subagent_finished', 'interrupted', 'context_overflow')),
 	CONSTRAINT "sessions_outcome" CHECK("sessions"."outcome" in ('successful', 'failed')),
 	CONSTRAINT "sessions_closed" CHECK(("sessions"."closed_at" is null) = ("sessions"."close_reason" is null)),
 	CONSTRAINT "sessions_parent" CHECK(("sessions"."kind" = 'subagent') = ("sessions"."parent_session_id" is not null)),
 	CONSTRAINT "sessions_parent_call" CHECK(("sessions"."parent_session_id" is null) = ("sessions"."parent_call_id" is null)),
 	CONSTRAINT "sessions_outcome_at" CHECK(("sessions"."outcome" is null) = ("sessions"."outcome_at" is null)),
-	CONSTRAINT "sessions_marked" CHECK("sessions"."outcome" is null or ("sessions"."kind" = 'interactive' and "sessions"."close_reason" = 'marked')),
-	CONSTRAINT "sessions_owner" CHECK(("sessions"."owner_id" is null) = ("sessions"."owner_heartbeat_at" is null))
+	CONSTRAINT "sessions_marked" CHECK("sessions"."outcome" is null or ("sessions"."kind" = 'interactive' and "sessions"."close_reason" = 'marked'))
 );
 --> statement-breakpoint
 CREATE INDEX `sessions_cwd` ON `sessions` (`cwd`,`last_activity_at`) WHERE "sessions"."kind" <> 'subagent';--> statement-breakpoint
 CREATE INDEX `sessions_workflow` ON `sessions` (`workflow_id`,`last_activity_at`) WHERE "sessions"."kind" = 'interactive';--> statement-breakpoint
 CREATE INDEX `sessions_parent` ON `sessions` (`parent_session_id`) WHERE "sessions"."parent_session_id" is not null;--> statement-breakpoint
-CREATE INDEX `sessions_owner` ON `sessions` (`owner_id`) WHERE "sessions"."owner_id" is not null;--> statement-breakpoint
 CREATE INDEX `sessions_open` ON `sessions` (`last_activity_at`) WHERE "sessions"."closed_at" is null;--> statement-breakpoint
 CREATE TABLE `skill_version_files` (
 	`skill_version_id` text NOT NULL,
@@ -95,6 +91,7 @@ CREATE TABLE `skill_versions` (
 	`skill_id` text NOT NULL,
 	`version` integer NOT NULL,
 	`created_at` integer NOT NULL,
+	`activated_at` integer,
 	FOREIGN KEY (`skill_id`) REFERENCES `skills`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint

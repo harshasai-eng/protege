@@ -58,6 +58,7 @@ export const skillVersions = sqliteTable(
       .references(() => skills.id),
     version: integer().notNull(),
     createdAt: time().notNull(),
+    activatedAt: time(), // set by the import's last write; empty = a leftover
   },
   (t) => [uniqueIndex("skill_versions_skill_version").on(t.skillId, t.version)],
 );
@@ -92,19 +93,17 @@ export const sessions = sqliteTable(
     lastActivityAt: time().notNull(),
     closedAt: time(),
     closeReason: text({
-      enum: ["marked", "worker_finished", "subagent_finished", "process_died", "context_overflow"],
+      enum: ["marked", "worker_finished", "subagent_finished", "interrupted", "context_overflow"],
     }),
     outcome: text({ enum: ["successful", "failed"] }),
     outcomeNote: text(),
     outcomeAt: time(),
-    ownerId: text(),
-    ownerHeartbeatAt: time(),
   },
   (t) => [
     check("sessions_kind", sql`${t.kind} in ('interactive', 'worker', 'subagent')`),
     check(
       "sessions_close_reason",
-      sql`${t.closeReason} in ('marked', 'worker_finished', 'subagent_finished', 'process_died', 'context_overflow')`,
+      sql`${t.closeReason} in ('marked', 'worker_finished', 'subagent_finished', 'interrupted', 'context_overflow')`,
     ),
     check("sessions_outcome", sql`${t.outcome} in ('successful', 'failed')`),
     // Columns that are set together
@@ -116,12 +115,10 @@ export const sessions = sqliteTable(
       "sessions_marked",
       sql`${t.outcome} is null or (${t.kind} = 'interactive' and ${t.closeReason} = 'marked')`,
     ),
-    check("sessions_owner", sql`(${t.ownerId} is null) = (${t.ownerHeartbeatAt} is null)`),
-    // Listings and --continue; the picker's "last used"; children; heartbeats; retention
+    // Listings and --continue; the picker's "last used"; children; cleanup and retention
     index("sessions_cwd").on(t.cwd, t.lastActivityAt).where(sql`${t.kind} <> 'subagent'`),
     index("sessions_workflow").on(t.workflowId, t.lastActivityAt).where(sql`${t.kind} = 'interactive'`),
     index("sessions_parent").on(t.parentSessionId).where(sql`${t.parentSessionId} is not null`),
-    index("sessions_owner").on(t.ownerId).where(sql`${t.ownerId} is not null`),
     index("sessions_open").on(t.lastActivityAt).where(sql`${t.closedAt} is null`),
   ],
 );
@@ -147,7 +144,7 @@ const END_REASONS = [
   "max_turns",
   "cancelled",
   "time_limit",
-  "process_died",
+  "interrupted",
   "output_truncated",
   "content_filtered",
   "transient_exhausted",
