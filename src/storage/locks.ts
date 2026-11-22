@@ -24,21 +24,27 @@ export function takeLock(file: string): boolean {
   return granted;
 }
 
-/** Tries every pollMs until the lock is taken. Doesn't block the process while waiting */
+/**
+ * Tries every pollMs until the lock is taken, without blocking the process.
+ * With timeoutMs, gives up after that long. True if this process now holds it
+ */
 export async function waitForLock(
   file: string,
-  options: { signal?: AbortSignal; pollMs?: number; noticeAfterMs?: number; onNotice?: () => void } = {},
-): Promise<void> {
-  const { signal, pollMs = 100, noticeAfterMs = 1_000, onNotice } = options;
+  options: { signal?: AbortSignal; pollMs?: number; timeoutMs?: number; noticeAfterMs?: number; onNotice?: () => void } = {},
+): Promise<boolean> {
+  const { signal, pollMs = 100, timeoutMs = Infinity, noticeAfterMs = 1_000, onNotice } = options;
   const start = Date.now();
   let noticed = false;
   while (!takeLock(file)) {
-    if (!noticed && onNotice && Date.now() - start >= noticeAfterMs) {
+    const waited = Date.now() - start;
+    if (waited >= timeoutMs) return false;
+    if (!noticed && onNotice && waited >= noticeAfterMs) {
       noticed = true;
       onNotice();
     }
     await sleep(pollMs, undefined, { signal }); // rejects with AbortError when aborted
   }
+  return true;
 }
 
 /** Lets go of a lock this process holds */
