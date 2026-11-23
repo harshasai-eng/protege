@@ -1,12 +1,12 @@
 import Database from "better-sqlite3";
 import { drizzle, type BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import { readMigrationFiles, type MigrationMeta } from "drizzle-orm/migrator";
-import { mkdirSync, renameSync } from "node:fs";
+import { closeSync, fsyncSync, mkdirSync, openSync, renameSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import type { Config } from "../config/settings.ts";
-import { releaseLock, waitForLock } from "./locks.ts";
+import { releaseLock, takeLock } from "./locks.ts";
 import * as schema from "./schema.ts";
 
 export type Db = BetterSQLite3Database<typeof schema>;
@@ -32,19 +32,28 @@ export class StorageBusyError extends StorageError {
   }
 }
 
+/** Another process holds update.lock: the CLI exits with code 75 (try again later) */
+export class UpdateInProgressError extends StorageError {
+  override name = "UpdateInProgressError";
+  constructor() {
+    super("Another Protege is updating. Try again in a minute.");
+  }
+}
+
 // The migration files, shipped with Protege: <project>/drizzle
 const MIGRATIONS = join(import.meta.dirname, "..", "drizzle");
 
 /**
  * Opens (or creates) the database. Pending migrations run under update.lock,
- * next to the database file; while another process holds it, this waits
+ * next to the database file: one try, and UpdateInProgressError if another
+ * process holds it. Nothing pending: no lock at all
  */
 export async function openDatabase(
   file: string,
   storageConfig: Config["storage"],
-  options: { migrationsFolder?: string; signal?: AbortSignal; onWaiting?: () => void } = {},
+  options: { migrationsFolder?: string } = {},
 ): Promise<Storage> {
-  const { migrationsFolder = MIGRATIONS, signal, onWaiting } = options;
+  const { migrationsFolder = MIGRATIONS } = options;
   await mkdir(dirname(file), { recursive: true, mode: 0o700 });
   const sqlite = new Database(file, { timeout: storageConfig.busyTimeoutMs });
   try {
@@ -53,7 +62,7 @@ export async function openDatabase(
     const migrations = readMigrationFiles({ migrationsFolder });
     if (state(sqlite, file, migrations) === "pending") {
       const lock = join(dirname(file), "update.lock");
-      await waitForLock(lock, { signal, onNotice: onWaiting });
+      if (!takeLock(lock)) throw new UpdateInProgressError();
       try {
         sqlite.pragma("journal_mode = WAL"); // first run: converting needs a moment alone
         if (state(sqlite, file, migrations) === "pending") {
@@ -119,7 +128,8 @@ function state(sqlite: Database.Database, file: string, migrations: MigrationMet
   return exists && last === newestKnown ? "current" : "pending";
 }
 
-// Unless the database is brand new: VACUUM INTO a temporary name, then rename it
+// Unless the database is brand new: VACUUM INTO a temporary name, flush it to
+// disk, then rename it, so a crash can't leave a renamed but empty backup
 function backUp(sqlite: Database.Database, file: string): void {
   const hasTables = sqlite.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table'").get();
   if (!hasTables) return;
@@ -127,6 +137,12 @@ function backUp(sqlite: Database.Database, file: string): void {
   mkdirSync(backups, { recursive: true, mode: 0o700 });
   const target = join(backups, `protege-${Date.now()}.db`);
   sqlite.prepare("VACUUM INTO ?").run(`${target}.tmp`);
+  const fd = openSync(`${target}.tmp`, "r+"); // writable: Windows flushes only those
+  try {
+    fsyncSync(fd);
+  } finally {
+    closeSync(fd);
+  }
   renameSync(`${target}.tmp`, target);
 }
 

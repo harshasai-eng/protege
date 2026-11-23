@@ -5,7 +5,15 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { configSchema } from "../../config/settings.ts";
-import { openDatabase, retryBusy, type Storage, StorageBusyError, StorageError, write } from "../db.ts";
+import {
+  openDatabase,
+  retryBusy,
+  type Storage,
+  StorageBusyError,
+  StorageError,
+  UpdateInProgressError,
+  write,
+} from "../db.ts";
 import { workflows } from "../schema.ts";
 
 const settings = configSchema.parse({ model: { name: "test-model" } }).storage;
@@ -114,16 +122,23 @@ describe("openDatabase", () => {
     expect(await readdir(join(dir, "backups"))).toEqual([expect.stringMatching(/^protege-\d+\.db$/)]);
   });
 
-  it("waits for update.lock while another process holds it", async () => {
+    it("refuses at once while another process holds update.lock", async () => {
     child = fork(join(import.meta.dirname, "fixtures", "hold-lock.ts"), [join(dir, "update.lock")]);
     expect(await new Promise((resolve) => child!.once("message", resolve))).toBe("held");
-    let waiting = false;
-    const opening = open({ onWaiting: () => (waiting = true) });
-    await new Promise((resolve) => setTimeout(resolve, 1_200));
-    expect(waiting).toBe(true);
+    const started = Date.now();
+    await expect(open()).rejects.toBeInstanceOf(UpdateInProgressError);
+    expect(Date.now() - started).toBeLessThan(1_000);
     child.kill("SIGKILL");
-    const s = await opening;
-    expect(tables(s)).toContain("workflows");
+    await new Promise((resolve) => child!.once("exit", resolve));
+    expect(tables(await open())).toContain("workflows");
+  });
+
+  it("needs no lock when nothing is pending", async () => {
+    (await open()).close();
+    opened.pop();
+    child = fork(join(import.meta.dirname, "fixtures", "hold-lock.ts"), [join(dir, "update.lock")]);
+    expect(await new Promise((resolve) => child!.once("message", resolve))).toBe("held");
+    expect(tables(await open())).toContain("workflows");
   });
 });
 
