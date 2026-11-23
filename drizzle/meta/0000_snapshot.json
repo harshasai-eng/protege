@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "755dbd50-ab76-4928-908e-ab194545dddc",
+  "id": "3816d52d-9260-45f3-bf18-bfec623b6d8a",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "items": {
@@ -520,7 +520,7 @@
         },
         "sessions_close_reason": {
           "name": "sessions_close_reason",
-          "value": "\"sessions\".\"close_reason\" in ('marked', 'worker_finished', 'subagent_finished', 'interrupted', 'context_overflow')"
+          "value": "\"sessions\".\"close_reason\" in ('marked', 'worker_finished', 'subagent_finished', 'interrupted')"
         },
         "sessions_outcome": {
           "name": "sessions_outcome",

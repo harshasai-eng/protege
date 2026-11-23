@@ -2,8 +2,8 @@ import { chmod, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { ConfigError, loadApiKey, loadConfig } from "../src/config/load.ts";
-import { protegePaths } from "../src/config/paths.ts";
+import { ConfigError, loadApiKey, loadConfig } from "../load.ts";
+import { protegePaths } from "../paths.ts";
 
 let dir: string;
 let file: string;
@@ -23,7 +23,8 @@ describe("loadConfig", () => {
     await write("model:\n  name: gpt-5.6\n");
     const config = await loadConfig(file);
     expect(config.model.name).toBe("gpt-5.6");
-    expect(config.model.maxOutputTokens).toBe(8_000);
+    expect(config.model.maxOutputTokens).toBe(25_000);
+    expect(config.compaction.threshold).toBe(0.8);
     expect(config.loop.maxTurns).toBe(25);
     expect(config.cache.ttl).toBe("30m");
     expect(config.tools.readFile.defaultLimitLines).toBe(800);
@@ -55,8 +56,8 @@ describe("loadConfig", () => {
   });
 
   it("checks settings that must agree", async () => {
-    await write("model:\n  name: gpt-5.6\ncompaction:\n  reactiveTarget: 0.8\n");
-    await expect(loadConfig(file)).rejects.toThrow(/below compaction\.threshold/);
+    await write("model:\n  name: gpt-5.6\n  contextWindow: 20000\n  maxOutputTokens: 25000\n");
+    await expect(loadConfig(file)).rejects.toThrow(/below model\.contextWindow/);
   });
 
   it("throws ConfigError, not a raw error", async () => {
@@ -104,6 +105,6 @@ describe("protegePaths", () => {
   it("puts everything under PROTEGE_HOME", () => {
     const paths = protegePaths("/tmp/ph");
     expect(paths.config).toBe(join("/tmp/ph", "protege.yaml"));
-    expect(paths.errorLog).toBe(join("/tmp/ph", "logs", "protege.log"));
+    expect(paths.logs).toBe(join("/tmp/ph", "logs"));
   });
 });

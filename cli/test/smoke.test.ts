@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { HARNESS_VERSION } from "../src/version.ts";
+import { HARNESS_VERSION } from "../../config/version.ts";
 
 describe("scaffold", () => {
   it("has a version number", () => {

@@ -136,6 +136,7 @@ export async function markOutcome(
   id: string,
   outcome: "successful" | "failed",
   note: string | null,
+  budgetMs: number = store.storage.writeBudgetMs,
 ): Promise<void> {
   if (lockState(sessionLockFile(store.locksDir, id)) !== "mine") {
     throw new Error(`Session ${id} isn't held by this process`);
@@ -151,7 +152,7 @@ export async function markOutcome(
           .run().changes;
         if (changed !== 1) throw new SessionError("Only an open interactive session can be marked.");
       }),
-    store.storage.writeBudgetMs,
+    budgetMs,
   );
   releaseSession(store.locksDir, id);
 }

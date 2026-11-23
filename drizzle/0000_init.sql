@@ -64,7 +64,7 @@ CREATE TABLE `sessions` (
 	FOREIGN KEY (`workflow_id`) REFERENCES `workflows`(`id`) ON UPDATE no action ON DELETE no action,
 	FOREIGN KEY (`parent_session_id`) REFERENCES `sessions`(`id`) ON UPDATE no action ON DELETE no action,
 	CONSTRAINT "sessions_kind" CHECK("sessions"."kind" in ('interactive', 'worker', 'subagent')),
-	CONSTRAINT "sessions_close_reason" CHECK("sessions"."close_reason" in ('marked', 'worker_finished', 'subagent_finished', 'interrupted', 'context_overflow')),
+	CONSTRAINT "sessions_close_reason" CHECK("sessions"."close_reason" in ('marked', 'worker_finished', 'subagent_finished', 'interrupted')),
 	CONSTRAINT "sessions_outcome" CHECK("sessions"."outcome" in ('successful', 'failed')),
 	CONSTRAINT "sessions_closed" CHECK(("sessions"."closed_at" is null) = ("sessions"."close_reason" is null)),
 	CONSTRAINT "sessions_parent" CHECK(("sessions"."kind" = 'subagent') = ("sessions"."parent_session_id" is not null)),

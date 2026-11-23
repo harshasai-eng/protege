@@ -4,7 +4,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { deleteLockFile, lockState, releaseLock, takeLock, waitForLock } from "../src/storage/locks.ts";
+import { deleteLockFile, lockState, releaseLock, takeLock, waitForLock } from "../locks.ts";
 
 let dir: string;
 let file: string;

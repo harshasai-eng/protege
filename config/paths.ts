@@ -12,7 +12,7 @@ export function protegePaths(home: string = protegeHome()) {
     home,
     config: join(home, "protege.yaml"),
     envFile: join(home, ".env"),
-    errorLog: join(home, "logs", "protege.log"),
+    logs: join(home, "logs"),
     database: join(home, "protege.db"),
     artifacts: join(home, "artifacts"),
     locks: join(home, "locks"),

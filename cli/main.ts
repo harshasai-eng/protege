@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { HARNESS_VERSION } from "../version.ts";
+import { HARNESS_VERSION } from "../config/version.ts";
 
 function main(args: string[]): number {
   if (args.includes("--version") || args.includes("-v")) {

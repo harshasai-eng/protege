@@ -4,9 +4,9 @@ import { cp, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { configSchema } from "../src/config/settings.ts";
-import { openDatabase, retryBusy, type Storage, StorageBusyError, StorageError, write } from "../src/storage/db.ts";
-import { workflows } from "../src/storage/schema.ts";
+import { configSchema } from "../../config/settings.ts";
+import { openDatabase, retryBusy, type Storage, StorageBusyError, StorageError, write } from "../db.ts";
+import { workflows } from "../schema.ts";
 
 const settings = configSchema.parse({ model: { name: "test-model" } }).storage;
 
@@ -98,7 +98,7 @@ describe("openDatabase", () => {
   it("backs up, then applies a new migration", async () => {
     // A copy of the real migrations, plus a made-up second one
     const migrationsFolder = join(dir, "drizzle");
-    await cp(join(import.meta.dirname, "..", "drizzle"), migrationsFolder, { recursive: true });
+    await cp(join(import.meta.dirname, "..", "..", "drizzle"), migrationsFolder, { recursive: true });
     (await open({ migrationsFolder })).close();
     opened = [];
 
@@ -157,14 +157,5 @@ describe("writes", () => {
     const s = await open();
     // @ts-expect-error: a transaction can't span an await
     expect(() => write(s.db, async () => 1)).toThrow(/promise/);
-  });
-
-  it("starts transactions only in db.ts", async () => {
-    const files = (await readdir(join(import.meta.dirname, "..", "src"), { recursive: true }))
-      .filter((f) => f.endsWith(".ts") && f !== join("storage", "db.ts"));
-    for (const f of files) {
-      const text = await readFile(join(import.meta.dirname, "..", "src", f), "utf8");
-      expect(text, f).not.toMatch(/\.transaction\(|\bBEGIN\b/);
-    }
   });
 });

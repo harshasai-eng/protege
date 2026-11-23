@@ -93,7 +93,7 @@ export const sessions = sqliteTable(
     lastActivityAt: time().notNull(),
     closedAt: time(),
     closeReason: text({
-      enum: ["marked", "worker_finished", "subagent_finished", "interrupted", "context_overflow"],
+      enum: ["marked", "worker_finished", "subagent_finished", "interrupted"],
     }),
     outcome: text({ enum: ["successful", "failed"] }),
     outcomeNote: text(),
@@ -103,7 +103,7 @@ export const sessions = sqliteTable(
     check("sessions_kind", sql`${t.kind} in ('interactive', 'worker', 'subagent')`),
     check(
       "sessions_close_reason",
-      sql`${t.closeReason} in ('marked', 'worker_finished', 'subagent_finished', 'interrupted', 'context_overflow')`,
+      sql`${t.closeReason} in ('marked', 'worker_finished', 'subagent_finished', 'interrupted')`,
     ),
     check("sessions_outcome", sql`${t.outcome} in ('successful', 'failed')`),
     // Columns that are set together

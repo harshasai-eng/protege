@@ -4,10 +4,10 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { configSchema } from "../src/config/settings.ts";
-import { openDatabase, type Storage } from "../src/storage/db.ts";
-import { lockState } from "../src/storage/locks.ts";
-import { items } from "../src/storage/schema.ts";
+import { configSchema } from "../../config/settings.ts";
+import { openDatabase, type Storage } from "../db.ts";
+import { lockState } from "../locks.ts";
+import { items } from "../schema.ts";
 import {
   continueLatest,
   createSession,
@@ -18,8 +18,8 @@ import {
   resumeSession,
   type SessionStore,
   sessionLockFile,
-} from "../src/storage/sessions.ts";
-import { createWorkflow } from "../src/storage/workflows.ts";
+} from "../sessions.ts";
+import { createWorkflow } from "../workflows.ts";
 
 const config = configSchema.parse({ model: { name: "test-model" } });
 
@@ -33,7 +33,7 @@ beforeEach(async () => {
   dir = await mkdtemp(join(tmpdir(), "protege-test-"));
   storage = await openDatabase(join(dir, "protege.db"), config.storage);
   store = { db: storage.db, locksDir: join(dir, "locks"), storage: config.storage };
-  workflowId = createWorkflow(storage.db, config, { name: "Expense audit", description: "d" }).id;
+    workflowId = (await createWorkflow(storage.db, { name: "Expense audit", description: "d" }, config.storage.writeBudgetMs)).id;
 });
 afterEach(async () => {
   if (child && child.exitCode === null && child.signalCode === null) {

@@ -20,5 +20,5 @@
     "forceConsistentCasingInFileNames": true,
     "noEmit": true
   },
-  "include": ["src", "test"]
+  "include": ["cli", "api", "engine", "provider", "shell", "storage", "config", "test"]
 }

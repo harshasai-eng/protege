@@ -33,7 +33,7 @@ export class StorageBusyError extends StorageError {
 }
 
 // The migration files, shipped with Protege: <project>/drizzle
-const MIGRATIONS = join(import.meta.dirname, "..", "..", "drizzle");
+const MIGRATIONS = join(import.meta.dirname, "..", "drizzle");
 
 /**
  * Opens (or creates) the database. Pending migrations run under update.lock,
