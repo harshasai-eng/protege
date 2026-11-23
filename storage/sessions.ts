@@ -1,10 +1,10 @@
-import { and, desc, eq, isNull, ne } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, ne, or } from "drizzle-orm";
 import { join, resolve } from "node:path";
 import { v7 as uuidv7 } from "uuid";
 import type { Config } from "../config/settings.ts";
 import { type Db, retryBusy, write } from "./db.ts";
 import { deleteLockFile, lockState, releaseLock, takeLock, waitForLock } from "./locks.ts";
-import { items, sessionSkills, sessions } from "./schema.ts";
+import { items, runs, sessionSkills, sessions } from "./schema.ts";
 
 export type Session = typeof sessions.$inferSelect;
 
@@ -164,4 +164,57 @@ export async function markOutcome(
  */
 export function releaseSession(locksDir: string, id: string): void {
   releaseLock(sessionLockFile(locksDir, id));
+}
+
+/** One session's row, if there is one */
+export function getSession(db: Db, id: string): Session | undefined {
+  return db.select().from(sessions).where(eq(sessions.id, id)).get();
+}
+
+/** Open sessions that may need recovering: every worker and sub-agent session, and any with an unfinished run */
+export function sessionsToRecover(db: Db): string[] {
+  return db
+    .selectDistinct({ id: sessions.id })
+    .from(sessions)
+    .leftJoin(runs, and(eq(runs.sessionId, sessions.id), isNull(runs.endedAt)))
+    .where(and(isNull(sessions.closedAt), or(ne(sessions.kind, "interactive"), isNotNull(runs.sessionId))))
+    .all()
+    .map((row) => row.id);
+}
+
+/** For each id that has a row: whether that session is closed */
+export function closedStates(db: Db, ids: string[]): Map<string, boolean> {
+  const found = new Map<string, boolean>();
+  for (let i = 0; i < ids.length; i += 500) {
+    const rows = db
+      .select({ id: sessions.id, closedAt: sessions.closedAt })
+      .from(sessions)
+      .where(inArray(sessions.id, ids.slice(i, i + 500)))
+      .all();
+    for (const row of rows) found.set(row.id, row.closedAt !== null);
+  }
+  return found;
+}
+
+/** Closes an open session (a worker's or sub-agent's, after a crash). True if it was open */
+export async function closeSession(
+  db: Db,
+  id: string,
+  reason: "worker_finished" | "subagent_finished" | "interrupted",
+  budgetMs: number,
+): Promise<boolean> {
+  return retryBusy(
+    () =>
+      write(db, (tx) => {
+        const now = Date.now();
+        return (
+          tx
+            .update(sessions)
+            .set({ closedAt: now, closeReason: reason })
+            .where(and(eq(sessions.id, id), isNull(sessions.closedAt)))
+            .run().changes === 1
+        );
+      }),
+    budgetMs,
+  );
 }

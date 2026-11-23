@@ -17,6 +17,9 @@ export function protegePaths(home: string = protegeHome()) {
     artifacts: join(home, "artifacts"),
     locks: join(home, "locks"),
     updateLock: join(home, "update.lock"),
+    cleanupLock: join(home, "cleanup.lock"),
+    backups: join(home, "backups"),
+    trash: join(home, "trash"),
     skills: join(home, "skills"),
     runtime: join(home, "runtime"),
   };

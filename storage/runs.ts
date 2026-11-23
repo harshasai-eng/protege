@@ -1,4 +1,4 @@
-import { and, eq, gte, isNull, max, sql } from "drizzle-orm";
+import { and, desc, eq, gte, isNull, max, sql } from "drizzle-orm";
 import { type Db, retryBusy, type Tx, write } from "./db.ts";
 import { items, runs, sessions } from "./schema.ts";
 
@@ -168,6 +168,10 @@ export function unfinishedRun(db: Db | Tx, sessionId: string): Run | undefined {
     .from(runs)
     .where(and(eq(runs.sessionId, sessionId), isNull(runs.endedAt)))
     .get();
+}
+/** The session's latest run, ended or not */
+export function latestRun(db: Db, sessionId: string): Run | undefined {
+  return db.select().from(runs).where(eq(runs.sessionId, sessionId)).orderBy(desc(runs.runIndex)).get();
 }
 
 // ---- Inside a write
