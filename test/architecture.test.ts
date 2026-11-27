@@ -41,6 +41,14 @@ describe("the codebase", () => {
       }
     }
   });
+  
+  it("only provider/ imports openai", async () => {
+    for (const file of await sourceFiles()) {
+      if (file.startsWith(`provider${sep}`)) continue;
+      const text = await readFile(join(root, file), "utf8");
+      expect(text, file).not.toMatch(/from "openai[/"]|import\("openai[/"]/);
+    }
+  });
 
   it("starts transactions only in storage/db.ts", async () => {
     for (const file of await sourceFiles()) {
